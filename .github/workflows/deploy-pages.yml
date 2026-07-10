@@ -29,10 +29,34 @@ jobs:
 
       - name: Build static site bundle
         run: |
+          set -euo pipefail
+          pwd
+          ls -la
+          ls -la pingme || true
+
           mkdir -p _site
-          cp pingme/privacy_policy.html _site/privacy_policy.html
-          cp pingme/terms_of_service.html _site/terms_of_service.html
-          if [ -f pingme/index.html ]; then cp pingme/index.html _site/index.html; fi
+
+          PRIVACY_SRC=""
+          TERMS_SRC=""
+          for p in privacy_policy.html pingme/privacy_policy.html; do
+            if [ -f "$p" ]; then PRIVACY_SRC="$p"; break; fi
+          done
+          for p in terms_of_service.html pingme/terms_of_service.html; do
+            if [ -f "$p" ]; then TERMS_SRC="$p"; break; fi
+          done
+
+          if [ -z "$PRIVACY_SRC" ] || [ -z "$TERMS_SRC" ]; then
+            echo "Required legal files were not found."
+            echo "Detected PRIVACY_SRC='$PRIVACY_SRC' TERMS_SRC='$TERMS_SRC'"
+            find . -maxdepth 3 -type f | sort
+            exit 1
+          fi
+
+          cp "$PRIVACY_SRC" _site/privacy_policy.html
+          cp "$TERMS_SRC" _site/terms_of_service.html
+
+          if [ -f index.html ]; then cp index.html _site/index.html; fi
+          if [ -f pingme/index.html ] && [ ! -f _site/index.html ]; then cp pingme/index.html _site/index.html; fi
           if [ ! -f _site/index.html ]; then
             cat > _site/index.html <<'EOF'
             <!doctype html>
