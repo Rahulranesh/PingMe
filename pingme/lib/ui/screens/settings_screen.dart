@@ -5,12 +5,17 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/profile_service.dart';
 import '../../services/auth_service.dart';
-import '../../services/notification_service.dart';
+import '../../services/theme_service.dart';
+import '../../services/language_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neumorphic_container.dart';
+import '../../utils/localization_helper.dart';
+import 'terms_of_service_screen.dart';
+import 'privacy_policy_screen.dart';
+import 'language_selection_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  const SettingsScreen({super.key});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -22,13 +27,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
   bool _locationEnabled = false;
-  String _selectedLanguage = 'en';
-  final Map<String, String> _languages = {
-    'en': 'English',
-    'es': 'Español',
-    'fr': 'Français',
-    'hi': 'हिंदी',
-  };
 
   @override
   void initState() {
@@ -38,14 +36,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _loadSettings() async {
     final profileService = context.read<ProfileService>();
+    final themeService = context.read<ThemeService>();
     final prefs = await SharedPreferences.getInstance();
     
     setState(() {
-      _isDarkMode = prefs.getBool('dark_mode') ?? false;
+      _isDarkMode = themeService.isDarkMode;
       _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
       _soundEnabled = prefs.getBool('sound_notifications') ?? true;
       _vibrationEnabled = prefs.getBool('vibration_notifications') ?? true;
-      _selectedLanguage = prefs.getString('app_language') ?? 'en';
     });
     
     // Check location permission status
@@ -62,14 +60,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!authService.isAuthenticated) {
       return Scaffold(
         body: Center(
-          child: Text('Please login to access settings'),
+          child: Text(context.l10n.pleaseLoginToAccessSettings),
         ),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Settings'),
+        title: Text(context.l10n.settings),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -96,15 +94,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Appearance',
+            context.l10n.appearance,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 16),
           SwitchListTile(
-            title: Text('Dark Mode'),
-            subtitle: Text('Switch between light and dark themes'),
+            title: Text(context.l10n.darkMode),
+            subtitle: Text(context.l10n.switchTheme),
             secondary: Icon(
               _isDarkMode ? Icons.dark_mode : Icons.light_mode,
               color: AppTheme.primaryColor,
@@ -114,19 +112,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onChanged: (value) async {
               setState(() => _isDarkMode = value);
               
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setBool('dark_mode', value);
-              
-              // Update theme immediately
-              if (mounted) {
-                final profileService = context.read<ProfileService>();
-                await profileService.setDarkMode(value);
-              }
+              final themeService = context.read<ThemeService>();
+              await themeService.setTheme(value);
               
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Theme changed to ${value ? "Dark" : "Light"} mode'),
-                  duration: Duration(seconds: 1),
+                  content: Text(value ? context.l10n.changedToDarkMode : context.l10n.changedToLightMode),
+                  duration: const Duration(seconds: 1),
+                  backgroundColor: AppTheme.primaryColor,
                 ),
               );
             },
@@ -142,16 +135,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Notifications',
+            context.l10n.notifications,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 16),
           SwitchListTile(
-            title: Text('Push Notifications'),
-            subtitle: Text('Receive notifications for messages'),
-            secondary: Icon(Icons.notifications, color: AppTheme.primaryColor),
+            title: Text(context.l10n.pushNotifications),
+            subtitle: Text(context.l10n.receiveNotifications),
+            secondary: const Icon(Icons.notifications, color: AppTheme.primaryColor),
             value: _notificationsEnabled,
             activeColor: AppTheme.primaryColor,
             onChanged: (value) async {
@@ -163,7 +156,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               if (value) {
                 // Request notification permission
                 await Permission.notification.request();
-                NotificationService().initialize();
+                // NotificationService().initialize(); // Commented out until implemented
               }
               
               if (mounted) {
@@ -174,9 +167,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           if (_notificationsEnabled) ...[
             SwitchListTile(
-              title: Text('Sound'),
-              subtitle: Text('Play sound for notifications'),
-              secondary: Icon(Icons.volume_up, color: AppTheme.primaryColor),
+              title: Text(context.l10n.sound),
+              subtitle: Text(context.l10n.playSound),
+              secondary: const Icon(Icons.volume_up, color: AppTheme.primaryColor),
               value: _soundEnabled,
               activeColor: AppTheme.primaryColor,
               onChanged: (value) async {
@@ -192,9 +185,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
             SwitchListTile(
-              title: Text('Vibration'),
-              subtitle: Text('Vibrate for notifications'),
-              secondary: Icon(Icons.vibration, color: AppTheme.primaryColor),
+              title: Text(context.l10n.vibration),
+              subtitle: Text(context.l10n.vibrateNotifications),
+              secondary: const Icon(Icons.vibration, color: AppTheme.primaryColor),
               value: _vibrationEnabled,
               activeColor: AppTheme.primaryColor,
               onChanged: (value) async {
@@ -221,43 +214,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Language',
+            context.l10n.language,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 16),
-          ...(_languages.entries.map((entry) {
-            return RadioListTile<String>(
-              title: Text(entry.value),
-              subtitle: Text(_getLanguageSubtitle(entry.key)),
-              secondary: _getLanguageFlag(entry.key),
-              value: entry.key,
-              groupValue: _selectedLanguage,
-              activeColor: AppTheme.primaryColor,
-              onChanged: (value) async {
-                if (value != null) {
-                  setState(() => _selectedLanguage = value);
-                  
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('app_language', value);
-                  
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Language changed to ${_languages[value]}'),
-                      duration: Duration(seconds: 1),
+          Consumer<LanguageService>(
+            builder: (context, languageService, _) {
+              return ListTile(
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppTheme.primaryColor.withOpacity(0.1),
+                  ),
+                  child: Center(
+                    child: Text(
+                      languageService.getLanguageFlag(languageService.currentLanguage),
+                      style: const TextStyle(fontSize: 20),
+                    ),
+                  ),
+                ),
+                title: Text(
+                  languageService.getLanguageName(languageService.currentLanguage),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: Text(
+                  context.l10n.appLanguage,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
+                  ),
+                ),
+                trailing: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: AppTheme.primaryColor,
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const LanguageSelectionScreen(),
                     ),
                   );
-                  
-                  // In a real app, you would reload the UI with new locale
-                  // using something like flutter_localizations
-                }
-              },
-            );
-          }).toList()),
+                },
+              );
+            },
+          ),
         ],
       ),
-    ).animate().fadeIn(duration: 400.ms, delay: 200.ms).slideX(begin: -0.1, end: 0);
+    ).animate().fadeIn(duration: 400.ms, delay: 150.ms).slideX(begin: 0.1, end: 0);
   }
 
   Widget _buildPrivacySection(BuildContext context) {
@@ -266,16 +276,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Privacy & Permissions',
+            context.l10n.privacyPermissions,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 16),
           SwitchListTile(
-            title: Text('Location Access'),
-            subtitle: Text('Allow app to access your location'),
-            secondary: Icon(Icons.location_on, color: AppTheme.primaryColor),
+            title: Text(context.l10n.locationAccess),
+            subtitle: Text(context.l10n.allowLocation),
+            secondary: const Icon(Icons.location_on, color: AppTheme.primaryColor),
             value: _locationEnabled,
             activeColor: AppTheme.primaryColor,
             onChanged: (value) async {
@@ -291,7 +301,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Location access granted'),
+                      content: Text(context.l10n.locationGranted),
                       backgroundColor: AppTheme.successColor,
                     ),
                   );
@@ -301,7 +311,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Location access denied'),
+                      content: Text(context.l10n.locationDenied),
                       backgroundColor: AppTheme.errorColor,
                     ),
                   );
@@ -313,22 +323,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Location access disabled'),
+                    content: Text(context.l10n.locationDisabled),
                   ),
                 );
               }
             },
           ),
           ListTile(
-            title: Text('Clear Chat History'),
-            subtitle: Text('Delete all message history'),
-            leading: Icon(Icons.delete_forever, color: Colors.red),
+            title: Text(context.l10n.clearChatHistory),
+            subtitle: Text(context.l10n.deleteAllMessages),
+            leading: const Icon(Icons.delete_forever, color: Colors.red),
             onTap: () => _showClearHistoryDialog(context),
           ),
           ListTile(
-            title: Text('Export Data'),
-            subtitle: Text('Export your profile and chat data'),
-            leading: Icon(Icons.download, color: AppTheme.primaryColor),
+            title: Text(context.l10n.exportData),
+            subtitle: Text(context.l10n.exportProfileData),
+            leading: const Icon(Icons.download, color: AppTheme.primaryColor),
             onTap: () => _exportData(context),
           ),
         ],
@@ -342,43 +352,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'About',
+            context.l10n.about,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 16),
           ListTile(
-            title: Text('Version'),
-            subtitle: Text('1.0.0'),
-            leading: Icon(Icons.info_outline, color: AppTheme.primaryColor),
+            title: Text(context.l10n.version),
+            subtitle: const Text('1.0.0'),
+            leading: const Icon(Icons.info_outline, color: AppTheme.primaryColor),
           ),
           ListTile(
-            title: Text('Terms of Service'),
-            leading: Icon(Icons.description, color: AppTheme.primaryColor),
-            trailing: Icon(Icons.arrow_forward_ios, size: 16),
+            title: Text(context.l10n.termsOfService),
+            leading: const Icon(Icons.description, color: AppTheme.primaryColor),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
-              // Open terms of service
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const TermsOfServiceScreen(),
+                ),
+              );
             },
           ),
           ListTile(
-            title: Text('Privacy Policy'),
-            leading: Icon(Icons.privacy_tip, color: AppTheme.primaryColor),
-            trailing: Icon(Icons.arrow_forward_ios, size: 16),
+            title: Text(context.l10n.privacyPolicy),
+            leading: const Icon(Icons.privacy_tip, color: AppTheme.primaryColor),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
-              // Open privacy policy
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PrivacyPolicyScreen(),
+                ),
+              );
             },
           ),
           ListTile(
-            title: Text('Licenses'),
-            leading: Icon(Icons.code, color: AppTheme.primaryColor),
-            trailing: Icon(Icons.arrow_forward_ios, size: 16),
+            title: Text(context.l10n.licenses),
+            leading: const Icon(Icons.code, color: AppTheme.primaryColor),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
               showLicensePage(
                 context: context,
                 applicationName: 'PingMe',
                 applicationVersion: '1.0.0',
-                applicationIcon: Icon(
+                applicationIcon: const Icon(
                   Icons.chat_bubble_rounded,
                   size: 64,
                   color: AppTheme.primaryColor,
@@ -391,52 +411,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ).animate().fadeIn(duration: 400.ms, delay: 400.ms).slideX(begin: -0.1, end: 0);
   }
 
-  String _getLanguageSubtitle(String code) {
-    switch (code) {
-      case 'en':
-        return 'English (US)';
-      case 'es':
-        return 'Spanish';
-      case 'fr':
-        return 'French';
-      case 'hi':
-        return 'Hindi';
-      default:
-        return '';
-    }
-  }
-
-  Widget _getLanguageFlag(String code) {
-    String flag;
-    switch (code) {
-      case 'en':
-        flag = '🇺🇸';
-        break;
-      case 'es':
-        flag = '🇪🇸';
-        break;
-      case 'fr':
-        flag = '🇫🇷';
-        break;
-      case 'hi':
-        flag = '🇮🇳';
-        break;
-      default:
-        flag = '🌍';
-    }
-    return Text(flag, style: TextStyle(fontSize: 24));
-  }
-
   void _showClearHistoryDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Clear Chat History'),
-        content: Text('Are you sure you want to delete all message history? This action cannot be undone.'),
+        title: Text(context.l10n.clearChatHistory),
+        content: Text(context.l10n.areYouSure),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -444,7 +428,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // Clear chat history logic here
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Chat history cleared'),
+                  content: Text(context.l10n.chatHistoryCleared),
                   backgroundColor: AppTheme.successColor,
                 ),
               );
@@ -452,7 +436,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
             ),
-            child: Text('Clear'),
+            child: Text(context.l10n.clear),
           ),
         ],
       ),
@@ -463,8 +447,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Export user data logic
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Exporting data...'),
-        duration: Duration(seconds: 1),
+        content: Text(context.l10n.exportingData),
+        duration: const Duration(seconds: 1),
       ),
     );
     

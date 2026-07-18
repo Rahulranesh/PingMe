@@ -3,14 +3,16 @@ import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../services/chat_service.dart';
 import '../../services/discovery_service.dart';
+import '../../services/mdns_discovery_service.dart';
 import '../../models/message.dart';
 import '../../models/device.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neumorphic_container.dart';
+import '../../utils/localization_helper.dart';
 import 'chat_screen.dart';
 
 class ChatListScreen extends StatefulWidget {
-  const ChatListScreen({Key? key}) : super(key: key);
+  const ChatListScreen({super.key});
 
   @override
   State<ChatListScreen> createState() => _ChatListScreenState();
@@ -69,14 +71,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'No conversations yet',
+            context.l10n.noConversationsYet,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               color: Colors.grey.shade600,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Discover nearby devices to start chatting',
+            context.l10n.discoverNearbyToChat,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey.shade500,
             ),
@@ -101,12 +103,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
       padding: const EdgeInsets.only(bottom: 12),
       child: NeumorphicContainer(
         onTap: () {
+          // Ensure we pass the latest device state from discovery service
+          final mdnsService = context.read<MDNSDiscoveryService>();
+          final latestDevice = mdnsService.discoveredDevices[device.id] ?? device;
+          
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ChatScreen(device: device),
+              builder: (context) => ChatScreen(device: latestDevice),
             ),
-          );
+          ).then((_) {
+            // Refresh messages when returning from chat
+            setState(() {});
+          });
         },
         child: Row(
           children: [

@@ -4,11 +4,13 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neumorphic_container.dart';
+import '../../widgets/translated_text.dart';
+import '../../utils/localization_helper.dart';
 import 'signup_screen.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -76,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
       height: 100,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
@@ -108,8 +110,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildWelcomeText(BuildContext context) {
     return Column(
       children: [
-        Text(
-          'Welcome Back',
+        TranslatedText(
+          'welcome_to_pingme',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: AppTheme.primaryColor,
@@ -119,8 +121,8 @@ class _LoginScreenState extends State<LoginScreen> {
             .fadeIn(duration: 400.ms, delay: 200.ms)
             .slideY(begin: 0.2, end: 0),
         const SizedBox(height: 8),
-        Text(
-          'Sign in to continue to PingMe',
+        TranslatedText(
+          'connect_instantly',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Colors.grey.shade600,
               ),
@@ -139,18 +141,18 @@ class _LoginScreenState extends State<LoginScreen> {
         controller: _emailController,
         keyboardType: TextInputType.emailAddress,
         decoration: InputDecoration(
-          labelText: 'Email',
-          hintText: 'Enter your email',
+          labelText: context.l10n.email,
+          hintText: context.l10n.enterYourEmail,
           prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.primaryColor),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
         validator: (value) {
           if (value == null || value.trim().isEmpty) {
-            return 'Please enter your email';
+            return context.l10n.pleaseEnterEmail;
           }
           if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-            return 'Please enter a valid email';
+            return context.l10n.pleaseEnterValidEmail;
           }
           return null;
         },
@@ -168,8 +170,8 @@ class _LoginScreenState extends State<LoginScreen> {
         controller: _passwordController,
         obscureText: _obscurePassword,
         decoration: InputDecoration(
-          labelText: 'Password',
-          hintText: 'Enter your password',
+          labelText: context.l10n.password,
+          hintText: context.l10n.enterYourPassword,
           prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.primaryColor),
           suffixIcon: IconButton(
             icon: Icon(
@@ -187,10 +189,10 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         validator: (value) {
           if (value == null || value.trim().isEmpty) {
-            return 'Please enter your password';
+            return context.l10n.pleaseEnterPassword;
           }
           if (value.length < 6) {
-            return 'Password must be at least 6 characters';
+            return context.l10n.passwordMinLength;
           }
           return null;
         },
@@ -208,15 +210,15 @@ class _LoginScreenState extends State<LoginScreen> {
         onPressed: () {
           // Implement forgot password
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Password reset feature coming soon'),
+            SnackBar(
+              content: Text(context.l10n.passwordResetComingSoon),
               backgroundColor: AppTheme.primaryColor,
             ),
           );
         },
         child: Text(
-          'Forgot Password?',
-          style: TextStyle(
+          context.l10n.forgotPassword,
+          style: const TextStyle(
             color: AppTheme.primaryColor,
             fontWeight: FontWeight.w600,
           ),
@@ -239,7 +241,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       child: Row(
         children: [
-          Icon(
+          const Icon(
             Icons.error_outline,
             color: AppTheme.errorColor,
             size: 20,
@@ -248,7 +250,7 @@ class _LoginScreenState extends State<LoginScreen> {
           Expanded(
             child: Text(
               _errorMessage!,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppTheme.errorColor,
                 fontSize: 14,
               ),
@@ -277,9 +279,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   strokeWidth: 2,
                 ),
               )
-            : const Text(
-                'Sign In',
-                style: TextStyle(
+            : Text(
+                context.l10n.signIn,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -304,7 +306,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            'OR',
+            context.l10n.or,
             style: TextStyle(
               color: Colors.grey.shade500,
               fontWeight: FontWeight.w600,
@@ -354,9 +356,9 @@ class _LoginScreenState extends State<LoginScreen> {
               },
             ),
             const SizedBox(width: 12),
-            const Text(
-              'Continue with Google',
-              style: TextStyle(
+            Text(
+              context.l10n.continueWithGoogle,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -375,7 +377,7 @@ class _LoginScreenState extends State<LoginScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          "Don't have an account? ",
+          context.l10n.dontHaveAccount,
           style: TextStyle(
             color: Colors.grey.shade600,
           ),
@@ -390,8 +392,8 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           },
           child: Text(
-            'Sign Up',
-            style: TextStyle(
+            context.l10n.signUp,
+            style: const TextStyle(
               color: AppTheme.primaryColor,
               fontWeight: FontWeight.bold,
             ),
@@ -461,7 +463,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Google sign-in failed. Please try again.';
+        _errorMessage = context.l10n.googleSignInFailed;
       });
     } finally {
       if (mounted) {

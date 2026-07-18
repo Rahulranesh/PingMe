@@ -28,6 +28,11 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // Fix for shader compilation issues
+        ndk {
+            debugSymbolLevel 'NONE'
+        }
     }
 
     buildTypes {

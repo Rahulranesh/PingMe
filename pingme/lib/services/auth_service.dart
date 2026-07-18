@@ -1,10 +1,12 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:crypto/crypto.dart';
 import 'package:uuid/uuid.dart';
 import '../models/user.dart';
+import 'package:crypto/crypto.dart';
+import 'profile_service.dart';
 
 class AuthService extends ChangeNotifier {
   static final AuthService _instance = AuthService._internal();
@@ -13,6 +15,8 @@ class AuthService extends ChangeNotifier {
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
+    // Add your OAuth Client ID here (optional but recommended)
+    // clientId: 'YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com',
   );
 
   User? _currentUser;
@@ -37,6 +41,12 @@ class AuthService extends ChangeNotifier {
       try {
         _currentUser = User.fromJson(json.decode(userJson));
         _isAuthenticated = true;
+        
+        // Sync with ProfileService when restoring session
+        await _prefs!.setString('user_profile', userJson);
+        await ProfileService().loadProfile();
+        debugPrint('✅ AuthService: Session restored and synced with ProfileService');
+        
         notifyListeners();
         return true;
       } catch (e) {
@@ -53,6 +63,9 @@ class AuthService extends ChangeNotifier {
     required String name,
   }) async {
     try {
+      // Ensure prefs is initialized
+      if (_prefs == null) await initialize();
+      
       // Validate email
       if (!_isValidEmail(email)) {
         throw Exception('Invalid email format');
@@ -114,6 +127,9 @@ class AuthService extends ChangeNotifier {
     required String password,
   }) async {
     try {
+      // Ensure prefs is initialized
+      if (_prefs == null) await initialize();
+      
       // Validate email
       if (!_isValidEmail(email)) {
         throw Exception('Invalid email format');
@@ -168,10 +184,17 @@ class AuthService extends ChangeNotifier {
 
   Future<bool> signInWithGoogle() async {
     try {
+      // Ensure prefs is initialized
+      if (_prefs == null) await initialize();
+      
+      // Force account picker to show
+      await _googleSignIn.signOut(); // Sign out first
+      
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       
       if (googleUser == null) {
-        return false; // User cancelled
+        // User cancelled the sign-in
+        return false;
       }
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
@@ -234,14 +257,22 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> _createSession(User user) async {
+    if (_prefs == null) await initialize();
     final sessionToken = _generateSessionToken();
     await _prefs!.setString('session_token', sessionToken);
     await _prefs!.setString('user_data', json.encode(user.toJson()));
     await _prefs!.setString('user_data_${user.id}', json.encode(user.toJson()));
     await _prefs!.setInt('session_created', DateTime.now().millisecondsSinceEpoch);
+    
+    // Sync with ProfileService - save user profile using the same key ProfileService expects
+    await _prefs!.setString('user_profile', json.encode(user.toJson()));
+    // Force ProfileService to reload the profile
+    await ProfileService().loadProfile();
+    debugPrint('✅ AuthService: Synced user profile with ProfileService');
   }
 
   Future<void> clearSession() async {
+    if (_prefs == null) await initialize();
     await _prefs!.remove('session_token');
     await _prefs!.remove('user_data');
     await _prefs!.remove('session_created');
@@ -254,11 +285,12 @@ class AuthService extends ChangeNotifier {
     String? status,
   }) async {
     if (_currentUser == null) return;
+    if (_prefs == null) await initialize();
 
     _currentUser = _currentUser!.copyWith(
-      name: name,
-      bio: bio,
-      avatarUrl: avatarUrl,
+      name: name ?? _currentUser!.name,
+      bio: bio ?? _currentUser!.bio,
+      avatarUrl: avatarUrl ?? _currentUser!.avatarUrl,
       status: status,
     );
 
@@ -267,7 +299,6 @@ class AuthService extends ChangeNotifier {
       'user_data_${_currentUser!.id}',
       json.encode(_currentUser!.toJson()),
     );
-    
     notifyListeners();
   }
 
@@ -291,7 +322,7 @@ class AuthService extends ChangeNotifier {
   }
 
   bool isSessionValid() {
-    if (!_isAuthenticated) return false;
+    if (!_isAuthenticated || _prefs == null) return false;
     
     final sessionCreated = _prefs!.getInt('session_created');
     if (sessionCreated == null) return false;

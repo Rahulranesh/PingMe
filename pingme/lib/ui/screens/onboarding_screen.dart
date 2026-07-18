@@ -8,7 +8,7 @@ import '../../widgets/pingme_toy_guide.dart';
 import 'home_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({Key? key}) : super(key: key);
+  const OnboardingScreen({super.key});
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -80,7 +80,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   const SizedBox(height: 20),
                   _buildPrivacyText(context),
                   const SizedBox(height: 20),
-                  PingMeToyGuide(
+                  const PingMeToyGuide(
                     message: "Fill in your name and tap 'Get Started' to begin!",
                     animationType: 'heart',
                     guideName: 'onboarding_setup',
@@ -100,7 +100,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       height: 120,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
@@ -173,12 +173,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       padding: EdgeInsets.zero,
       child: TextFormField(
         controller: _nameController,
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
           labelText: 'Your Name',
           hintText: 'Enter your name',
-          prefixIcon: const Icon(Icons.person_outline, color: AppTheme.primaryColor),
+          prefixIcon: Icon(Icons.person_outline, color: AppTheme.primaryColor),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
         validator: (value) {
           if (value == null || value.trim().isEmpty) {
@@ -205,12 +205,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       padding: EdgeInsets.zero,
       child: TextFormField(
         controller: _statusController,
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
           labelText: 'Status (optional)',
           hintText: 'What\'s on your mind?',
-          prefixIcon: const Icon(Icons.mood, color: AppTheme.primaryColor),
+          prefixIcon: Icon(Icons.mood, color: AppTheme.primaryColor),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
         maxLength: 100,
         buildCounter: (context, {required int currentLength, required bool isFocused, maxLength}) => null,
@@ -236,9 +236,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   strokeWidth: 2,
                 ),
               )
-            : Row(
+            : const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
+                children: [
                   Text(
                     'Get Started',
                     style: TextStyle(

@@ -13,7 +13,7 @@ class NeumorphicContainer extends StatelessWidget {
   final VoidCallback? onTap;
 
   const NeumorphicContainer({
-    Key? key,
+    super.key,
     required this.child,
     this.padding,
     this.margin,
@@ -23,7 +23,7 @@ class NeumorphicContainer extends StatelessWidget {
     this.color,
     this.isPressed = false,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +66,7 @@ class NeumorphicButton extends StatefulWidget {
   final double? height;
 
   const NeumorphicButton({
-    Key? key,
+    super.key,
     required this.child,
     this.onPressed,
     this.color,
@@ -74,7 +74,7 @@ class NeumorphicButton extends StatefulWidget {
     this.borderRadius,
     this.width,
     this.height,
-  }) : super(key: key);
+  });
 
   @override
   State<NeumorphicButton> createState() => _NeumorphicButtonState();
@@ -156,7 +156,7 @@ class NeumorphicTextField extends StatelessWidget {
   final FocusNode? focusNode;
 
   const NeumorphicTextField({
-    Key? key,
+    super.key,
     this.controller,
     this.hintText,
     this.labelText,
@@ -169,7 +169,7 @@ class NeumorphicTextField extends StatelessWidget {
     this.maxLines = 1,
     this.autofocus = false,
     this.focusNode,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -221,7 +221,7 @@ class NeumorphicTextField extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(
+            borderSide: const BorderSide(
               color: AppTheme.primaryColor,
               width: 2,
             ),

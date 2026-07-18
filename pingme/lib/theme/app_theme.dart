@@ -31,9 +31,9 @@ class AppTheme {
       blurRadius: 15,
       spreadRadius: 1,
     ),
-    BoxShadow(
+    const BoxShadow(
       color: Colors.white,
-      offset: const Offset(-4, -4),
+      offset: Offset(-4, -4),
       blurRadius: 15,
       spreadRadius: 1,
     ),
@@ -64,12 +64,10 @@ class AppTheme {
       primary: primaryColor,
       secondary: secondaryColor,
       surface: lightSurface,
-      background: lightBackground,
       error: errorColor,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onSurface: lightTextPrimary,
-      onBackground: lightTextPrimary,
       onError: Colors.white,
     ),
     textTheme: TextTheme(
@@ -228,12 +226,10 @@ class AppTheme {
       primary: primaryColor,
       secondary: secondaryColor,
       surface: darkSurface,
-      background: darkBackground,
       error: errorColor,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onSurface: darkTextPrimary,
-      onBackground: darkTextPrimary,
       onError: Colors.white,
     ),
     textTheme: TextTheme(

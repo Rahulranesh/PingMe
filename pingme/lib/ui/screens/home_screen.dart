@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import '../../services/mdns_discovery_service.dart';
+import '../../services/chat_service.dart';
 import '../../services/profile_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/chat_request_service.dart';
+import '../../services/language_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neumorphic_container.dart';
 import '../../widgets/pingme_toy_guide.dart';
-import 'discovery_screen.dart';
+import '../../widgets/chat_request_listener.dart';
+import '../../utils/localization_helper.dart';
 import 'chat_list_screen.dart';
+import 'discovery_screen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -34,6 +41,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       _showContextualGuide();
     });
     
+    // Initialize services in background
+    _initializeServicesInBackground();
+    
     // Show initial guide
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 500), () {
@@ -48,6 +58,35 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       });
     });
   }
+
+  void _initializeServicesInBackground() async {
+    try {
+      final authService = context.read<AuthService>();
+      
+      // Initialize ChatRequestService if user is logged in
+      final chatRequestService = context.read<ChatRequestService>();
+      if (authService.currentUser != null) {
+        await chatRequestService.initialize(authService.currentUser!);
+      }
+
+      // Discovery service - start discovery if not already running
+      final mdnsService = context.read<MDNSDiscoveryService>();
+      if (!mdnsService.isDiscovering) {
+        await mdnsService.initialize().timeout(const Duration(seconds: 5));
+        await mdnsService.startDiscovery().timeout(const Duration(seconds: 3));
+      }
+
+      // Chat service - initialize if user is logged in
+      if (authService.currentUser != null) {
+        final chatService = context.read<ChatService>();
+        await chatService.initialize(authService.currentUser!).timeout(const Duration(seconds: 5));
+      }
+      
+    } catch (e) {
+      debugPrint('Error initializing services: $e');
+      // Services can still be initialized on-demand
+    }
+  }
   
   void _showContextualGuide() {
     if (!mounted) return;
@@ -57,19 +96,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     
     switch (_currentIndex) {
       case 0:
-        message = "View your conversations here!";
+        message = context.l10n.viewConversationsHere;
         animationType = 'chat';
         break;
       case 1:
-        message = "Discover nearby devices to chat with!";
+        message = context.l10n.discoverNearbyDevices;
         animationType = 'search';
         break;
       case 2:
-        message = "Customize your profile here!";
+        message = context.l10n.customizeProfileHere;
         animationType = 'star';
         break;
       case 3:
-        message = "Adjust your app preferences!";
+        message = context.l10n.adjustPreferences;
         animationType = 'wave';
         break;
       default:
@@ -94,25 +133,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(context),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: const [
-                  ChatListScreen(),
-                  DiscoveryScreen(),
-                  ProfileScreen(),
-                  SettingsScreen(),
-                ],
+    return ChatRequestListener(
+      child: Scaffold(
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(context),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: const [
+                    ChatListScreen(),
+                    DiscoveryScreen(),
+                    ProfileScreen(),
+                    SettingsScreen(),
+                  ],
+                ),
               ),
-            ),
-            _buildBottomNavBar(context),
-          ],
+            ],
+          ),
         ),
+        bottomNavigationBar: _buildBottomNavBar(context),
       ),
     );
   }
@@ -150,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    user.isOnline ? 'Online' : 'Offline',
+                    user.isOnline ? context.l10n.online : context.l10n.offline,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -165,8 +206,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
-      height: 70,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      height: 56,
       decoration: BoxDecoration(
         color: isDark ? AppTheme.darkSurface : AppTheme.lightSurface,
         boxShadow: [
@@ -184,28 +224,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             context,
             Icons.chat_bubble_outline,
             Icons.chat_bubble,
-            'Chats',
+            context.l10n.chat,
             0,
           ),
           _buildNavItem(
             context,
             Icons.explore_outlined,
             Icons.explore,
-            'Discover',
+            context.l10n.discover,
             1,
           ),
           _buildNavItem(
             context,
             Icons.person_outline,
             Icons.person,
-            'Profile',
+            context.l10n.profile,
             2,
           ),
           _buildNavItem(
             context,
             Icons.settings_outlined,
             Icons.settings,
-            'Settings',
+            context.l10n.settings,
             3,
           ),
         ],
@@ -221,39 +261,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     int index,
   ) {
     final isActive = _currentIndex == index;
-    final color = isActive ? AppTheme.primaryColor : Colors.grey;
+    final color = isActive ? AppTheme.primaryColor : Colors.grey.shade600;
 
-    return GestureDetector(
-      onTap: () {
-        _tabController.animateTo(index);
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: isActive
-            ? BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              )
-            : null,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isActive ? activeIcon : icon,
-              color: color,
-              size: 24,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
+    return Expanded(
+      child: InkWell(
+        onTap: () => _tabController.animateTo(index),
+        child: Container(
+          height: 56,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isActive ? activeIcon : icon,
                 color: color,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                size: 20,
               ),
-            ),
-          ],
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: color,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

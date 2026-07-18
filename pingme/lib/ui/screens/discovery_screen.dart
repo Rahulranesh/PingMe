@@ -1,16 +1,18 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../utils/localization_helper.dart';
 import '../../services/mdns_discovery_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/chat_request_service.dart';
 import '../../models/device.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neumorphic_container.dart';
 import '../../widgets/pingme_toy_guide.dart';
-import 'chat_screen.dart';
 
 class DiscoveryScreen extends StatefulWidget {
-  const DiscoveryScreen({Key? key}) : super(key: key);
+  const DiscoveryScreen({super.key});
 
   @override
   State<DiscoveryScreen> createState() => _DiscoveryScreenState();
@@ -35,7 +37,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Failed to start discovery: $e'),
+                content: Text(context.l10n.failedToStartDiscovery(e.toString())),
                 backgroundColor: AppTheme.errorColor,
               ),
             );
@@ -64,9 +66,9 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.lock_outline, size: 64, color: Colors.grey),
+            const Icon(Icons.lock_outline, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
-            Text('Please login to discover devices',
+            Text(context.l10n.pleaseLoginToDiscoverDevices,
                 style: Theme.of(context).textTheme.titleMedium),
           ],
         ),
@@ -107,8 +109,8 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
             ),
           PingMeToyGuide(
             message: isScanning 
-                ? "Scanning for nearby devices..." 
-                : "Tap the radar button to find devices!",
+                ? context.l10n.scanningForNearbyDevices 
+                : context.l10n.tapRadarButton,
             animationType: 'search',
             guideName: 'discovery_hint',
           ),
@@ -133,12 +135,12 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Nearby Devices',
+                    context.l10n.discoverDevices,
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    isScanning ? 'Scanning...' : 'Tap to scan',
+                    isScanning ? context.l10n.searching : context.l10n.tapToConnect,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.grey,
                     ),
@@ -183,7 +185,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
   }
 
   Widget _buildRadarAnimation(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: 100,
       width: double.infinity,
       child: Stack(
@@ -212,7 +214,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
           Container(
             width: 10,
             height: 10,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppTheme.primaryColor,
               shape: BoxShape.circle,
             ),
@@ -234,7 +236,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
           ),
           const SizedBox(height: 16),
           Text(
-            isScanning ? 'Searching for devices...' : 'No devices found',
+            isScanning ? context.l10n.searching : context.l10n.noDevicesFound,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               color: Colors.grey.shade600,
             ),
@@ -242,8 +244,8 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
           const SizedBox(height: 8),
           Text(
             isScanning
-                ? 'Make sure other devices are nearby\nand have PingMe open'
-                : 'Tap the scan button to search\nfor nearby devices',
+              ? context.l10n.makeOtherDevicesNearby
+              : context.l10n.tapScanButton,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey.shade500,
             ),
@@ -425,7 +427,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Connect to ${device.name}'),
+        title: Text(context.l10n.connectTo(device.name)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -461,7 +463,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
               ),
             const SizedBox(height: 16),
             Text(
-              'Do you want to chat with this person connected on this WiFi?',
+              context.l10n.doYouWantToChat,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
@@ -507,7 +509,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -516,10 +518,10 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
               try {
                 // Show loading indicator
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
+                  SnackBar(
                     content: Row(
                       children: [
-                        SizedBox(
+                        const SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
@@ -527,39 +529,76 @@ class _DiscoveryScreenState extends State<DiscoveryScreen>
                             color: Colors.white,
                           ),
                         ),
-                        SizedBox(width: 16),
-                        Text('Connecting...'),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(context.l10n.connectingAndSending),
+                        ),
                       ],
                     ),
-                    duration: Duration(seconds: 2),
+                    duration: const Duration(seconds: 3),
                   ),
                 );
                 
-                // Connect to device
                 final mdnsService = context.read<MDNSDiscoveryService>();
-                await mdnsService.connectToDevice(device);
+                final chatRequestService = context.read<ChatRequestService>();
+                // Check if already connected
+                if (device.status == ConnectionStatus.connected) {
+                  debugPrint('Device already connected, sending chat request directly');
+                } else {
+                  debugPrint('Connecting to device first...');
+                  // First, connect to the device
+                  await mdnsService.connectToDevice(device);
+                  
+                  // Wait for connection to establish and check status
+                  int attempts = 0;
+                  while (device.status != ConnectionStatus.connected && attempts < 10) {
+                    await Future.delayed(const Duration(milliseconds: 200));
+                    attempts++;
+                    debugPrint('Connection attempt $attempts, status: ${device.status}');
+                  }
+                  
+                  if (device.status != ConnectionStatus.connected) {
+                    throw Exception('Failed to establish connection to ${device.name}');
+                  }
+                }
                 
-                // Navigate to chat screen
-                if (context.mounted) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ChatScreen(device: device),
+                debugPrint('Connection established, sending chat request...');
+                
+                // Then send chat request
+                final success = await chatRequestService.sendChatRequest(
+                  targetDevice: device,
+                  mdnsService: mdnsService,
+                  message: 'Hi! Would you like to chat?',
+                );
+                
+                if (success && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(context.l10n.chatRequestSentTo(device.name)),
+                      backgroundColor: AppTheme.successColor,
+                    ),
+                  );
+                } else if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(context.l10n.failedToSendChatRequestTo(device.name)),
+                      backgroundColor: AppTheme.errorColor,
                     ),
                   );
                 }
               } catch (e) {
+                debugPrint('Error sending chat request: $e');
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Failed to connect: $e'),
+                      content: Text(context.l10n.failedToConnectError(e.toString())),
                       backgroundColor: AppTheme.errorColor,
                     ),
                   );
                 }
               }
             },
-            child: const Text('Connect'),
+            child: Text(context.l10n.sendChatRequest),
           ),
         ],
       ),

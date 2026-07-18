@@ -4,11 +4,12 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neumorphic_container.dart';
+import '../../utils/localization_helper.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
 
 class SignupScreen extends StatefulWidget {
-  const SignupScreen({Key? key}) : super(key: key);
+  const SignupScreen({super.key});
 
   @override
   State<SignupScreen> createState() => _SignupScreenState();
@@ -86,7 +87,7 @@ class _SignupScreenState extends State<SignupScreen> {
       height: 100,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
@@ -119,7 +120,7 @@ class _SignupScreenState extends State<SignupScreen> {
     return Column(
       children: [
         Text(
-          'Create Account',
+          context.l10n.createAccount,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: AppTheme.primaryColor,
@@ -130,7 +131,7 @@ class _SignupScreenState extends State<SignupScreen> {
             .slideY(begin: 0.2, end: 0),
         const SizedBox(height: 8),
         Text(
-          'Join PingMe to chat locally',
+          context.l10n.joinPingMe,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Colors.grey.shade600,
               ),
@@ -149,18 +150,18 @@ class _SignupScreenState extends State<SignupScreen> {
         controller: _nameController,
         textCapitalization: TextCapitalization.words,
         decoration: InputDecoration(
-          labelText: 'Full Name',
-          hintText: 'Enter your full name',
+          labelText: context.l10n.fullName,
+          hintText: context.l10n.enterYourName,
           prefixIcon: const Icon(Icons.person_outline, color: AppTheme.primaryColor),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
         validator: (value) {
           if (value == null || value.trim().isEmpty) {
-            return 'Please enter your name';
+            return context.l10n.pleaseEnterName;
           }
           if (value.trim().length < 2) {
-            return 'Name must be at least 2 characters';
+            return context.l10n.nameMinLength;
           }
           return null;
         },
@@ -178,18 +179,18 @@ class _SignupScreenState extends State<SignupScreen> {
         controller: _emailController,
         keyboardType: TextInputType.emailAddress,
         decoration: InputDecoration(
-          labelText: 'Email',
-          hintText: 'Enter your email',
+          labelText: context.l10n.email,
+          hintText: context.l10n.enterYourEmail,
           prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.primaryColor),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
         validator: (value) {
           if (value == null || value.trim().isEmpty) {
-            return 'Please enter your email';
+            return context.l10n.pleaseEnterEmail;
           }
           if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-            return 'Please enter a valid email';
+            return context.l10n.pleaseEnterValidEmail;
           }
           return null;
         },
@@ -207,8 +208,8 @@ class _SignupScreenState extends State<SignupScreen> {
         controller: _passwordController,
         obscureText: _obscurePassword,
         decoration: InputDecoration(
-          labelText: 'Password',
-          hintText: 'Create a password',
+          labelText: context.l10n.password,
+          hintText: context.l10n.createPassword,
           prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.primaryColor),
           suffixIcon: IconButton(
             icon: Icon(
@@ -226,10 +227,10 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
         validator: (value) {
           if (value == null || value.isEmpty) {
-            return 'Please enter a password';
+            return context.l10n.pleaseEnterPassword;
           }
           if (value.length < 6) {
-            return 'Password must be at least 6 characters';
+            return context.l10n.passwordMinLength;
           }
           return null;
         },
@@ -247,8 +248,8 @@ class _SignupScreenState extends State<SignupScreen> {
         controller: _confirmPasswordController,
         obscureText: _obscureConfirmPassword,
         decoration: InputDecoration(
-          labelText: 'Confirm Password',
-          hintText: 'Re-enter your password',
+          labelText: context.l10n.confirmPassword,
+          hintText: context.l10n.reenterPassword,
           prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.primaryColor),
           suffixIcon: IconButton(
             icon: Icon(
@@ -266,10 +267,10 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
         validator: (value) {
           if (value == null || value.isEmpty) {
-            return 'Please confirm your password';
+            return context.l10n.pleaseConfirmPassword;
           }
           if (value != _passwordController.text) {
-            return 'Passwords do not match';
+            return context.l10n.passwordsDoNotMatch;
           }
           return null;
         },
@@ -304,7 +305,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 text: 'I agree to the ',
                 style: TextStyle(color: Colors.grey.shade600),
                 children: [
-                  TextSpan(
+                  const TextSpan(
                     text: 'Terms of Service',
                     style: TextStyle(
                       color: AppTheme.primaryColor,
@@ -315,7 +316,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     text: ' and ',
                     style: TextStyle(color: Colors.grey.shade600),
                   ),
-                  TextSpan(
+                  const TextSpan(
                     text: 'Privacy Policy',
                     style: TextStyle(
                       color: AppTheme.primaryColor,
@@ -345,7 +346,7 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
       child: Row(
         children: [
-          Icon(
+          const Icon(
             Icons.error_outline,
             color: AppTheme.errorColor,
             size: 20,
@@ -354,7 +355,7 @@ class _SignupScreenState extends State<SignupScreen> {
           Expanded(
             child: Text(
               _errorMessage!,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppTheme.errorColor,
                 fontSize: 14,
               ),
@@ -495,7 +496,7 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
             );
           },
-          child: Text(
+          child: const Text(
             'Sign In',
             style: TextStyle(
               color: AppTheme.primaryColor,

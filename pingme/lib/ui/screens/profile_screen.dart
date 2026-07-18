@@ -9,9 +9,10 @@ import '../../services/auth_service.dart';
 import '../../services/mdns_discovery_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neumorphic_container.dart';
+import '../../utils/localization_helper.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -24,7 +25,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _statusController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   
-  bool _isDarkMode = false;
   bool _notificationsEnabled = true;
   bool _readReceipts = true;
   bool _typingIndicator = true;
@@ -58,7 +58,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final prefs = await SharedPreferences.getInstance();
     _localImagePath = prefs.getString('user_avatar_${user.id}');
     
-    _isDarkMode = await profileService.isDarkMode();
     _notificationsEnabled = await profileService.areNotificationsEnabled();
     _readReceipts = await profileService.isReadReceiptsEnabled();
     _typingIndicator = await profileService.isTypingIndicatorEnabled();
@@ -82,14 +81,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (!authService.isAuthenticated || user == null) {
       return Scaffold(
         body: Center(
-          child: Text('Please login to view profile'),
+          child: Text(context.l10n.pleaseLoginToView),
         ),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Profile'),
+        title: Text(context.l10n.profile),
         actions: [
           IconButton(
             icon: Icon(_isEditing ? Icons.check : Icons.edit),
@@ -141,7 +140,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       : Container(
                           width: 100,
                           height: 100,
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: LinearGradient(
                               colors: [
@@ -212,7 +211,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Profile Information',
+            context.l10n.profileInformation,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -222,8 +221,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             controller: _nameController,
             enabled: _isEditing,
             decoration: InputDecoration(
-              labelText: 'Name',
-              hintText: 'Enter your name',
+              labelText: context.l10n.name,
+              hintText: context.l10n.enterYourName,
               prefixIcon: const Icon(Icons.person_outline),
               filled: true,
               fillColor: _isEditing ? null : Colors.grey.withOpacity(0.1),
@@ -234,8 +233,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             controller: _emailController,
             enabled: _isEditing,
             decoration: InputDecoration(
-              labelText: 'Email',
-              hintText: 'Enter your email',
+              labelText: context.l10n.email,
+              hintText: context.l10n.enterYourEmail,
               prefixIcon: const Icon(Icons.email_outlined),
               filled: true,
               fillColor: _isEditing ? null : Colors.grey.withOpacity(0.1),
@@ -246,8 +245,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             controller: _statusController,
             enabled: _isEditing,
             decoration: InputDecoration(
-              labelText: 'Status',
-              hintText: 'What\'s on your mind?',
+              labelText: context.l10n.status,
+              hintText: context.l10n.whatsOnYourMind,
               prefixIcon: const Icon(Icons.info_outline),
               filled: true,
               fillColor: _isEditing ? null : Colors.grey.withOpacity(0.1),
@@ -259,8 +258,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             enabled: _isEditing,
             maxLines: 3,
             decoration: InputDecoration(
-              labelText: 'Bio',
-              hintText: 'Tell us about yourself',
+              labelText: context.l10n.bio,
+              hintText: context.l10n.tellUsAboutYourself,
               prefixIcon: const Icon(Icons.edit_note),
               filled: true,
               fillColor: _isEditing ? null : Colors.grey.withOpacity(0.1),
@@ -272,8 +271,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: NeumorphicButton(
                 onPressed: _saveProfile,
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                child: const Text(
-                  'Save Changes',
+                child: Text(
+                  context.l10n.saveChanges,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -294,7 +293,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Settings',
+            context.l10n.settings,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -302,20 +301,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 16),
           _buildSettingTile(
             context,
-            'Dark Mode',
-            Icons.dark_mode_outlined,
-            Switch(
-              value: _isDarkMode,
-              onChanged: (value) {
-                setState(() => _isDarkMode = value);
-                context.read<ProfileService>().setDarkMode(value);
-              },
-              activeColor: AppTheme.primaryColor,
-            ),
-          ),
-          _buildSettingTile(
-            context,
-            'Notifications',
+            context.l10n.notifications,
             Icons.notifications_outlined,
             Switch(
               value: _notificationsEnabled,
@@ -328,7 +314,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           _buildSettingTile(
             context,
-            'Read Receipts',
+            context.l10n.readReceipts,
             Icons.done_all,
             Switch(
               value: _readReceipts,
@@ -341,7 +327,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           _buildSettingTile(
             context,
-            'Typing Indicator',
+            context.l10n.typingIndicator,
             Icons.keyboard,
             Switch(
               value: _typingIndicator,
@@ -363,17 +349,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'About',
+            context.l10n.about,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 16),
-          _buildAboutTile(context, 'Version', '1.0.0'),
-          _buildAboutTile(context, 'Device ID', 
-            context.read<ProfileService>().currentUser?.deviceId ?? 'Unknown'),
-          _buildAboutTile(context, 'IP Address',
-            context.read<ProfileService>().currentUser?.ipAddress ?? 'Not connected'),
+          _buildAboutTile(context, context.l10n.version, '1.0.0'),
+          _buildAboutTile(context, context.l10n.deviceId, 
+            context.read<ProfileService>().currentUser?.deviceId ?? context.l10n.unknown),
+          _buildAboutTile(context, context.l10n.ipAddress,
+            context.read<ProfileService>().currentUser?.ipAddress ?? context.l10n.notConnected),
           const SizedBox(height: 16),
           Center(
             child: Column(
@@ -387,7 +373,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Real-time P2P Chat over WiFi',
+                  context.l10n.appTagline,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.grey,
                   ),
@@ -431,9 +417,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               color: Colors.grey,
             ),
           ),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.bodyMedium,
+          Expanded(
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
           ),
         ],
       ),
@@ -453,7 +444,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.camera_alt, color: AppTheme.primaryColor),
-              title: const Text('Take Photo'),
+              title: Text(context.l10n.takePhoto),
               onTap: () async {
                 Navigator.pop(context);
                 await _pickImage(ImageSource.camera);
@@ -461,7 +452,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.photo_library, color: AppTheme.primaryColor),
-              title: const Text('Choose from Gallery'),
+              title: Text(context.l10n.chooseFromGallery),
               onTap: () async {
                 Navigator.pop(context);
                 await _pickImage(ImageSource.gallery);
@@ -469,7 +460,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Remove Photo'),
+              title: Text(context.l10n.removePhoto),
               onTap: () async {
                 Navigator.pop(context);
                 await _removeAvatar();
@@ -501,7 +492,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to pick image: $e')),
+        SnackBar(content: Text(context.l10n.failedToPickImage)),
       );
     }
   }
@@ -525,14 +516,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     
     if (!authService.isAuthenticated || authService.currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please login to update profile')),
+        SnackBar(content: Text(context.l10n.pleaseLoginToUpdate)),
       );
       return;
     }
     
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name cannot be empty')),
+        SnackBar(content: Text(context.l10n.nameCannotBeEmpty)),
       );
       return;
     }
@@ -557,8 +548,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile updated successfully'),
+      SnackBar(
+        content: Text(context.l10n.profileUpdatedSuccessfully),
         backgroundColor: AppTheme.successColor,
       ),
     );

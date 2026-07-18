@@ -1,0 +1,2 @@
+C:/Users/SRIKA/Desktop/pingme/PingMe/pingme/android/app/.cxx/RelWithDebInfo/414t3e6n/x86/CMakeFiles/edit_cache.dir
+C:/Users/SRIKA/Desktop/pingme/PingMe/pingme/android/app/.cxx/RelWithDebInfo/414t3e6n/x86/CMakeFiles/rebuild_cache.dir

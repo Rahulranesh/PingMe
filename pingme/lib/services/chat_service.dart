@@ -9,8 +9,12 @@ import '../models/user.dart';
 import 'mdns_discovery_service.dart';
 import 'auth_service.dart';
 import 'notification_service.dart';
+import 'profile_service.dart';
 
 class ChatService extends ChangeNotifier {
+  static final ChatService _instance = ChatService._internal();
+  factory ChatService() => _instance;
+  ChatService._internal();
   static const int chatPort = 8889;
   static const int maxRetries = 3;
   static const Duration messageTimeout = Duration(seconds: 10);
@@ -19,7 +23,6 @@ class ChatService extends ChangeNotifier {
   final Map<String, Socket> _activeConnections = {};
   final Map<String, List<Message>> _conversations = {};
   final Map<String, StreamController<Message>> _messageStreams = {};
-  final List<Message> _pendingMessages = [];
   
   Box<Map>? _messagesBox;
   Box<Map>? _conversationsBox;
@@ -32,19 +35,36 @@ class ChatService extends ChangeNotifier {
   bool get isServerRunning => _isServerRunning;
   User? get currentUser => _currentUser;
 
-  Future<void> initialize(User user) async {
-    _currentUser = user;
-    await _initializeStorage();
-    await _loadConversations();
-    await startChatServer();
+  Future<void> initialize(User? user) async {
+    // Use provided user or get from ProfileService
+    _currentUser = user ?? ProfileService().currentUser;
+    
+    if (_currentUser == null) {
+      debugPrint('⚠️ ChatService: No user available for initialization');
+    } else {
+      debugPrint('✅ ChatService: Initializing with user ${_currentUser!.name} (${_currentUser!.id})');
+    }
+
+    try {
+      await _initializeStorage().timeout(const Duration(seconds: 5));
+      await _loadConversations().timeout(const Duration(seconds: 6));
+      await startChatServer().timeout(const Duration(seconds: 3));
+      debugPrint('Chat Service initialized successfully');
+    } catch (e) {
+      debugPrint('Chat Service initialization failed: $e');
+      // Continue with partial initialization - core functionality might still work
+      rethrow;
+    }
   }
 
   Future<void> _initializeStorage() async {
     try {
-      _messagesBox = await Hive.openBox<Map>('messages');
-      _conversationsBox = await Hive.openBox<Map>('conversations');
+      // Open boxes with timeout
+      _messagesBox = await Hive.openBox<Map>('messages').timeout(const Duration(seconds: 5));
+      _conversationsBox = await Hive.openBox<Map>('conversations').timeout(const Duration(seconds: 5));
     } catch (e) {
-      debugPrint('Error initializing storage: $e');
+      debugPrint('Storage initialization timeout: $e');
+      // Continue with null boxes - app can still function
     }
   }
 
@@ -52,16 +72,26 @@ class ChatService extends ChangeNotifier {
     if (_messagesBox == null || _currentUser == null) return;
     
     try {
-      // Load all messages from storage
-      for (var key in _messagesBox!.keys) {
-        final messageData = _messagesBox!.get(key);
-        if (messageData != null) {
-          final message = Message.fromJson(Map<String, dynamic>.from(messageData));
-          final chatId = message.chatId;
-          
-          _conversations.putIfAbsent(chatId, () => []);
-          _conversations[chatId]!.add(message);
+      // Load messages in batches to avoid blocking
+      final keys = _messagesBox!.keys.toList();
+      const batchSize = 50;
+      
+      for (int i = 0; i < keys.length; i += batchSize) {
+        final batch = keys.skip(i).take(batchSize).toList();
+        
+        for (var key in batch) {
+          final messageData = _messagesBox!.get(key);
+          if (messageData != null) {
+            final message = Message.fromJson(Map<String, dynamic>.from(messageData));
+            final chatId = message.chatId;
+            
+            _conversations.putIfAbsent(chatId, () => []);
+            _conversations[chatId]!.add(message);
+          }
         }
+        
+        // Yield control to UI thread
+        await Future.delayed(Duration.zero);
       }
       
       // Sort messages by timestamp
@@ -121,7 +151,7 @@ class ChatService extends ChangeNotifier {
       _chatServer = await ServerSocket.bind(
         InternetAddress.anyIPv4,
         chatPort,
-      );
+      ).timeout(const Duration(seconds: 5));
       _isServerRunning = true;
       notifyListeners();
 
@@ -197,7 +227,33 @@ class ChatService extends ChangeNotifier {
     }
   }
 
+  // Public method to handle incoming WebSocket messages from MDNSDiscoveryService
+  void handleIncomingWebSocketMessage(Map<String, dynamic> data, String senderIp) {
+    debugPrint('📨 ChatService handling incoming WebSocket message');
+    debugPrint('📋 Data: $data');
+    debugPrint('📍 From IP: $senderIp');
+    
+    try {
+      final type = data['type'] as String?;
+      
+      if (type == 'message' && data['message'] != null) {
+        _handleTextMessage(data, senderIp);
+      } else if (type == 'typing') {
+        _handleTypingIndicator(data, senderIp);
+      } else if (type == 'receipt') {
+        _handleMessageReceipt(data);
+      }
+    } catch (e) {
+      debugPrint('❌ Error in handleIncomingWebSocketMessage: $e');
+    }
+  }
+
   void _handleTextMessage(Map<String, dynamic> data, String senderIp) async {
+    // Get current user from ProfileService if not already set
+    if (_currentUser == null) {
+      _currentUser = ProfileService().currentUser;
+    }
+    
     // Check authentication
     if (!_authService.isAuthenticated || _currentUser == null) {
       debugPrint('Unauthenticated user cannot receive messages');
@@ -206,6 +262,17 @@ class ChatService extends ChangeNotifier {
     
     var message = Message.fromJson(data['message'] as Map<String, dynamic>);
     
+    debugPrint('📨 Handling text message from ${message.senderName} (${message.senderId})');
+    debugPrint('📋 Message content: ${message.content}');
+    debugPrint('👤 Receiver ID: ${message.receiverId}');
+    debugPrint('🆔 Current User ID: ${_currentUser!.id}');
+    
+    // Only process messages meant for this user
+    if (message.receiverId != _currentUser!.id && message.receiverId != _currentUser!.deviceId) {
+      debugPrint('⚠️ Message not for this user, ignoring');
+      return;
+    }
+    
     // Generate proper chat ID and create new message with updated fields
     final chatId = _generateChatId(message.senderId, _currentUser!.id);
     message = message.copyWith(
@@ -213,14 +280,26 @@ class ChatService extends ChangeNotifier {
       status: MessageStatus.delivered,
     );
     
-    // Store message in conversation and persist
-    _conversations.putIfAbsent(chatId, () => []);
-    _conversations[chatId]!.add(message);
-    await _saveMessage(message);
+    // Check if message already exists to avoid duplicates
+    bool messageExists = false;
+    if (_conversations.containsKey(chatId)) {
+      messageExists = _conversations[chatId]!.any((m) => m.id == message.id);
+    }
     
-    // Notify stream listeners
-    if (_messageStreams.containsKey(chatId)) {
-      _messageStreams[chatId]!.add(message);
+    if (!messageExists) {
+      // Store message in conversation and persist
+      _conversations.putIfAbsent(chatId, () => []);
+      _conversations[chatId]!.add(message);
+      await _saveMessage(message);
+      
+      // Notify stream listeners
+      if (_messageStreams.containsKey(chatId)) {
+        _messageStreams[chatId]!.add(message);
+      }
+      
+      debugPrint('✅ Message stored in chat: $chatId');
+    } else {
+      debugPrint('⚠️ Message already exists, skipping');
     }
     
     // Send delivery receipt
@@ -308,6 +387,11 @@ class ChatService extends ChangeNotifier {
     
     debugPrint('Connection request from $userName ($userId) at $senderIp');
     
+    // Get current user from ProfileService if not already set
+    if (_currentUser == null) {
+      _currentUser = ProfileService().currentUser;
+    }
+    
     // Send connection acknowledgment
     final response = json.encode({
       'type': 'connection_ack',
@@ -320,10 +404,18 @@ class ChatService extends ChangeNotifier {
   }
 
   Future<void> sendMessage(Message message, Device targetDevice, MDNSDiscoveryService mdnsService) async {
+    // Get current user from ProfileService if not already set
+    if (_currentUser == null) {
+      _currentUser = ProfileService().currentUser;
+    }
+    
     // Check authentication
     if (!_authService.isAuthenticated || _currentUser == null) {
+      debugPrint('❌ ChatService: Auth check - isAuthenticated: ${_authService.isAuthenticated}, currentUser: ${_currentUser?.name}');
       throw Exception('User not authenticated');
     }
+    
+    debugPrint('✅ ChatService: Sending message from ${_currentUser!.name} (${_currentUser!.id})');
     
     // Generate proper chat ID
     final chatId = _generateChatId(_currentUser!.id, targetDevice.userId ?? targetDevice.id);
@@ -351,7 +443,11 @@ class ChatService extends ChangeNotifier {
         'timestamp': DateTime.now().toIso8601String(),
       };
       
-      await mdnsService.sendMessage(targetDevice.id, messagePayload);
+      // Use both device ID and user ID to ensure message delivery
+      final targetId = targetDevice.userId ?? targetDevice.id;
+      debugPrint('📤 Sending message to: ${targetDevice.name} (ID: $targetId)');
+      
+      await mdnsService.sendMessage(targetId, messagePayload);
       updatedMessage.status = MessageStatus.sent;
       await _saveMessage(updatedMessage);
       
@@ -363,12 +459,7 @@ class ChatService extends ChangeNotifier {
       debugPrint('Error sending message: $e');
       updatedMessage.status = MessageStatus.failed;
       await _saveMessage(updatedMessage);
-      
-      // Try legacy connection if WebSocket fails
-      if (!_activeConnections.containsKey(targetDevice.ipAddress)) {
-        _pendingMessages.add(updatedMessage);
-        await _connectToDevice(targetDevice);
-      }
+      rethrow; // Propagate error to caller
     }
     
     notifyListeners();
@@ -406,50 +497,6 @@ class ChatService extends ChangeNotifier {
     }
   }
 
-  Future<void> _connectToDevice(Device device) async {
-    if (_activeConnections.containsKey(device.ipAddress)) return;
-    
-    try {
-      final socket = await Socket.connect(
-        device.ipAddress,
-        device.port,
-        timeout: const Duration(seconds: 5),
-      );
-      
-      _activeConnections[device.ipAddress] = socket;
-      
-      // Send connection request
-      final request = json.encode({
-        'type': 'connection',
-        'userId': _currentUser?.id,
-        'userName': _currentUser?.name,
-        'timestamp': DateTime.now().toIso8601String(),
-      });
-      
-      socket.write('$request\n');
-      
-      // Handle incoming messages from this connection
-      _handleIncomingConnection(socket);
-      
-      // Send pending messages
-      _sendPendingMessages(device);
-      
-    } catch (e) {
-      debugPrint('Error connecting to device: $e');
-      throw Exception('Failed to connect to device');
-    }
-  }
-
-  void _sendPendingMessages(Device device) {
-    final pending = _pendingMessages.where((m) => m.receiverId == device.userId).toList();
-    
-    for (final message in pending) {
-      // Note: sendMessage now requires MDNSDiscoveryService as third parameter
-      // This needs to be passed from the caller
-      debugPrint('Pending message needs MDNSDiscoveryService to resend');
-      _pendingMessages.remove(message);
-    }
-  }
 
   Future<void> _sendToDevice(String ipAddress, int port, String data) async {
     if (_activeConnections.containsKey(ipAddress)) {
@@ -477,6 +524,11 @@ class ChatService extends ChangeNotifier {
   }
 
   void markMessageAsRead(String messageId) async {
+    // Get current user from ProfileService if not already set
+    if (_currentUser == null) {
+      _currentUser = ProfileService().currentUser;
+    }
+    
     if (!_authService.isAuthenticated || _currentUser == null) return;
     
     for (final conversation in _conversations.values) {
@@ -541,6 +593,62 @@ class ChatService extends ChangeNotifier {
       conversation.removeWhere((m) => m.id == messageId);
     }
     notifyListeners();
+  }
+
+  Future<void> handleIncomingMessage(Map<String, dynamic> messageData, String senderDeviceId) async {
+    try {
+      debugPrint('Handling incoming message from $senderDeviceId');
+      debugPrint('Message data: $messageData');
+      
+      // Create message from received data
+      final message = Message.fromJson(messageData);
+      
+      // Generate chat ID
+      final chatId = _generateChatId(message.senderId, _currentUser?.id ?? '');
+      
+      // Update message with proper chat ID and mark as received
+      final receivedMessage = message.copyWith(
+        chatId: chatId,
+        status: MessageStatus.delivered,
+        timestamp: DateTime.now(),
+      );
+      
+      // Store in conversation
+      _conversations.putIfAbsent(chatId, () => []);
+      _conversations[chatId]!.add(receivedMessage);
+      await _saveMessage(receivedMessage);
+      
+      // Notify UI
+      notifyListeners();
+      
+      // Send to message stream if exists
+      if (_messageStreams.containsKey(chatId)) {
+        _messageStreams[chatId]!.add(receivedMessage);
+      }
+      
+      // Show notification
+      try {
+        debugPrint('Showing notification for message from ${receivedMessage.senderName}');
+      } catch (e) {
+        debugPrint('Error showing notification: $e');
+      }
+      
+      // Send delivery receipt
+      await _sendDeliveryReceipt(receivedMessage, senderDeviceId);
+      
+      debugPrint('Message handled successfully: ${receivedMessage.content}');
+    } catch (e) {
+      debugPrint('Error handling incoming message: $e');
+    }
+  }
+
+  Future<void> _sendDeliveryReceipt(Message message, String senderDeviceId) async {
+    try {
+      // This would need MDNSDiscoveryService to send receipt
+      debugPrint('Should send delivery receipt for message: ${message.id}');
+    } catch (e) {
+      debugPrint('Error sending delivery receipt: $e');
+    }
   }
 
   @override

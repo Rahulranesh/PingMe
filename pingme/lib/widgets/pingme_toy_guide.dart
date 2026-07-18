@@ -11,13 +11,13 @@ class PingMeToyGuide extends StatefulWidget {
   final String? guideName;
 
   const PingMeToyGuide({
-    Key? key,
+    super.key,
     required this.message,
     this.animationType = 'wave',
     this.onDismiss,
     this.showOnce = true,
     this.guideName,
-  }) : super(key: key);
+  });
 
   @override
   State<PingMeToyGuide> createState() => _PingMeToyGuideState();

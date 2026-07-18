@@ -19,21 +19,28 @@ class ProfileService extends ChangeNotifier {
   bool get isProfileSetup => _currentUser != null;
 
   Future<void> initialize() async {
+    debugPrint('🔧 ProfileService: Initializing...');
     _prefs = await SharedPreferences.getInstance();
     await loadProfile();
+    debugPrint('🔧 ProfileService: Initialization complete. Current user: ${_currentUser?.name} (${_currentUser?.id})');
   }
 
   Future<void> loadProfile() async {
     if (_prefs == null) await initialize();
 
     final userJson = _prefs!.getString('user_profile');
+    debugPrint('🔧 ProfileService: Loading profile from storage...');
+    
     if (userJson != null) {
       try {
         _currentUser = User.fromJson(json.decode(userJson));
+        debugPrint('✅ ProfileService: Profile loaded successfully: ${_currentUser?.name} (${_currentUser?.id})');
         notifyListeners();
       } catch (e) {
-        debugPrint('Error loading profile: $e');
+        debugPrint('❌ ProfileService: Error loading profile: $e');
       }
+    } else {
+      debugPrint('⚠️ ProfileService: No saved profile found in storage');
     }
   }
 
@@ -43,6 +50,7 @@ class ProfileService extends ChangeNotifier {
     String? avatarUrl,
     String? status,
   }) async {
+    debugPrint('🔧 ProfileService: Creating new profile for $name...');
     if (_prefs == null) await initialize();
 
     final deviceInfo = await _getDeviceInfo();
@@ -63,6 +71,7 @@ class ProfileService extends ChangeNotifier {
       },
     );
 
+    debugPrint('✅ ProfileService: Profile created with ID: ${_currentUser?.id}');
     await saveProfile();
     notifyListeners();
   }
@@ -87,12 +96,18 @@ class ProfileService extends ChangeNotifier {
   }
 
   Future<void> saveProfile() async {
-    if (_currentUser == null || _prefs == null) return;
+    if (_currentUser == null || _prefs == null) {
+      debugPrint('⚠️ ProfileService: Cannot save profile - user or prefs is null');
+      return;
+    }
 
-    await _prefs!.setString(
-      'user_profile',
-      json.encode(_currentUser!.toJson()),
-    );
+    try {
+      final jsonString = json.encode(_currentUser!.toJson());
+      await _prefs!.setString('user_profile', jsonString);
+      debugPrint('✅ ProfileService: Profile saved to storage for ${_currentUser?.name} (${_currentUser?.id})');
+    } catch (e) {
+      debugPrint('❌ ProfileService: Error saving profile: $e');
+    }
   }
 
   Future<void> updateOnlineStatus(bool isOnline) async {
@@ -115,47 +130,55 @@ class ProfileService extends ChangeNotifier {
 
   Future<Map<String, String>> _getDeviceInfo() async {
     final info = <String, String>{};
-
+    
+    // Run device info collection in parallel with timeout
     try {
+      final futures = <Future<void>>[];
+      
       if (Platform.isAndroid) {
-        final androidInfo = await _deviceInfo.androidInfo;
-        info['deviceId'] = androidInfo.id;
-        info['platform'] = 'Android';
-        info['model'] = '${androidInfo.manufacturer} ${androidInfo.model}';
-        info['osVersion'] = 'Android ${androidInfo.version.release}';
+        futures.add(() async {
+          final androidInfo = await _deviceInfo.androidInfo.timeout(const Duration(seconds: 2));
+          info.addAll({
+            'deviceId': androidInfo.id,
+            'platform': 'Android',
+            'model': '${androidInfo.manufacturer} ${androidInfo.model}',
+            'osVersion': 'Android ${androidInfo.version.release}',
+          });
+        }());
       } else if (Platform.isIOS) {
-        final iosInfo = await _deviceInfo.iosInfo;
-        info['deviceId'] = iosInfo.identifierForVendor ?? const Uuid().v4();
-        info['platform'] = 'iOS';
-        info['model'] = iosInfo.model;
-        info['osVersion'] = 'iOS ${iosInfo.systemVersion}';
-      } else if (Platform.isMacOS) {
-        final macInfo = await _deviceInfo.macOsInfo;
-        info['deviceId'] = macInfo.systemGUID ?? const Uuid().v4();
-        info['platform'] = 'macOS';
-        info['model'] = macInfo.model;
-        info['osVersion'] = 'macOS ${macInfo.majorVersion}.${macInfo.minorVersion}';
-      } else if (Platform.isLinux) {
-        final linuxInfo = await _deviceInfo.linuxInfo;
-        info['deviceId'] = linuxInfo.machineId ?? const Uuid().v4();
-        info['platform'] = 'Linux';
-        info['model'] = linuxInfo.name;
-        info['osVersion'] = linuxInfo.version ?? 'Unknown';
-      } else if (Platform.isWindows) {
-        final windowsInfo = await _deviceInfo.windowsInfo;
-        info['deviceId'] = windowsInfo.deviceId;
-        info['platform'] = 'Windows';
-        info['model'] = windowsInfo.productName;
-        info['osVersion'] = 'Windows ${windowsInfo.majorVersion}.${windowsInfo.minorVersion}';
+        futures.add(() async {
+          final iosInfo = await _deviceInfo.iosInfo.timeout(const Duration(seconds: 2));
+          info.addAll({
+            'deviceId': iosInfo.identifierForVendor ?? const Uuid().v4(),
+            'platform': 'iOS',
+            'model': iosInfo.model,
+            'osVersion': 'iOS ${iosInfo.systemVersion}',
+          });
+        }());
+      } else {
+        // For other platforms, use fallback immediately
+        info.addAll({
+          'deviceId': const Uuid().v4(),
+          'platform': Platform.operatingSystem,
+          'model': 'Unknown',
+          'osVersion': 'Unknown',
+        });
       }
+      
+      // Wait for platform-specific operations with timeout
+      await Future.wait(futures, eagerError: true).timeout(const Duration(seconds: 3));
+      
     } catch (e) {
-      debugPrint('Error getting device info: $e');
-      info['deviceId'] = const Uuid().v4();
-      info['platform'] = Platform.operatingSystem;
-      info['model'] = 'Unknown';
-      info['osVersion'] = 'Unknown';
+      debugPrint('Device info timeout: $e');
+      // Use fallback values
+      info.addAll({
+        'deviceId': const Uuid().v4(),
+        'platform': Platform.operatingSystem,
+        'model': 'Unknown',
+        'osVersion': 'Unknown',
+      });
     }
-
+    
     return info;
   }
 
@@ -250,8 +273,4 @@ class ProfileService extends ChangeNotifier {
   }
 
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }

@@ -1,0 +1,307 @@
+{
+  "@@locale": "en",
+  "appTitle": "PingMe",
+  "@appTitle": {
+    "description": "The title of the application"
+  },
+  
+  "welcome": "Welcome to PingMe",
+  "welcome_to_pingme": "Welcome to PingMe",
+  "connect_instantly": "Connect with nearby users instantly",
+  "enterYourEmail": "Enter your email",
+  "enterYourPassword": "Enter your password",
+  "continueWithGoogle": "Continue with Google",
+  "or": "OR",
+  "passwordResetComingSoon": "Password reset feature coming soon",
+  "pleaseEnterEmail": "Please enter your email",
+  "pleaseEnterValidEmail": "Please enter a valid email",
+  "pleaseEnterPassword": "Please enter your password",
+  "passwordMinLength": "Password must be at least 6 characters",
+  "googleSignInFailed": "Google sign-in failed. Please try again.",
+  "welcomeSubtitle": "Real-time P2P Chat over WiFi",
+  "signIn": "Sign In",
+  "signUp": "Sign Up",
+  "email": "Email",
+  "password": "Password",
+  "name": "Name",
+  "fullName": "Full Name",
+  "enterYourName": "Enter your full name",
+  "confirmPassword": "Confirm Password",
+  "createAccount": "Create Account",
+  "joinPingMe": "Join PingMe to chat locally",
+  "createPassword": "Create a password",
+  "reenterPassword": "Re-enter your password",
+  "pleaseEnterName": "Please enter your name",
+  "nameMinLength": "Name must be at least 2 characters",
+  "pleaseConfirmPassword": "Please confirm your password",
+  "iAgreeToThe": "I agree to the ",
+  "and": " and ",
+  "pleaseAcceptTerms": "Please accept the terms and conditions",
+  "signInWithGoogle": "Sign in with Google",
+  "alreadyHaveAccount": "Already have an account?",
+  "dontHaveAccount": "Don't have an account?",
+  "forgotPassword": "Forgot Password?",
+  "loginSuccessful": "Login successful!",
+  "signUpSuccessful": "Sign up successful!",
+  "invalidEmailOrPassword": "Invalid email or password",
+  "passwordsDoNotMatch": "Passwords do not match",
+  "emailAlreadyInUse": "Email already in use",
+  
+  "home": "Home",
+  "chats": "Chats",
+  "chat": "Chats",
+  "discover": "Discover",
+  "discoverDevices": "Discover Devices",
+  "searching": "Searching...",
+  "tapToConnect": "Tap to connect",
+  "noDevicesFound": "No devices found",
+  "pleaseLoginToDiscoverDevices": "Please login to discover devices",
+  "scanningForNearbyDevices": "Scanning for nearby devices...",
+  "tapRadarButton": "Tap the radar button to find devices!",
+  "makeOtherDevicesNearby": "Make sure other devices are nearby\nand have PingMe open",
+  "tapScanButton": "Tap the scan button to search\nfor nearby devices",
+  "connectTo": "Connect to {name}",
+  "@connectTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "doYouWantToChat": "Do you want to chat with this person connected on this WiFi?",
+  "chatRequestSentTo": "Chat request sent to {name}",
+  "@chatRequestSentTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToSendChatRequestTo": "Failed to send chat request to {name}",
+  "@failedToSendChatRequestTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToStartDiscovery": "Failed to start discovery: {error}",
+  "@failedToStartDiscovery": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToConnectError": "Failed to connect: {error}",
+  "@failedToConnectError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "profile": "Profile",
+  "settings": "Settings",
+  
+  "searchDevices": "Search for devices",
+  "connecting": "Connecting...",
+  "connected": "Connected",
+  "disconnected": "Disconnected",
+  "sendChatRequest": "Send Chat Request",
+  "chatRequestSent": "Chat request sent",
+  "chatRequestAccepted": "Chat request accepted",
+  "chatRequestRejected": "Chat request rejected",
+  "acceptChatRequest": "Accept",
+  "rejectChatRequest": "Reject",
+  "incomingChatRequest": "Incoming Chat Request",
+  "fromUser": "From: {userName}",
+  "@fromUser": {
+    "placeholders": {
+      "userName": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "typeMessage": "Type a message...",
+  "sayHiTo": "Say hi to {name}",
+  "@sayHiTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "startConversation": "Start a conversation",
+  "failedToConnect": "Failed to connect. Please ensure the other device is online.",
+  "failedToSendMessage": "Failed to send message. Please try again.",
+  "file": "File",
+  "send": "Send",
+  "online": "Online",
+  "offline": "Offline",
+  "typing": "typing...",
+  "lastSeen": "Last seen {time}",
+  "@lastSeen": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteMessage": "Delete message",
+  "copyMessage": "Copy message",
+  "messageDeleted": "Message deleted",
+  "messageCopied": "Message copied",
+  
+  "notifications": "Notifications",
+  "notificationsEnabled": "Notifications enabled",
+  "notificationsDisabled": "Notifications disabled",
+  "readReceipts": "Read Receipts",
+  "typingIndicator": "Typing Indicator",
+  "darkMode": "Dark Mode",
+  "language": "Language",
+  "about": "About",
+  "version": "Version",
+  "deviceId": "Device ID",
+  "ipAddress": "IP Address",
+  "notConnected": "Not connected",
+  
+  "editProfile": "Edit Profile",
+  "saveChanges": "Save Changes",
+  "bio": "Bio",
+  "status": "Status",
+  "tellAboutYourself": "Tell us about yourself",
+  "whatsOnYourMind": "What's on your mind?",
+  "profileUpdated": "Profile updated successfully",
+  "takePhoto": "Take Photo",
+  "chooseFromGallery": "Choose from Gallery",
+  "removePhoto": "Remove Photo",
+  
+  "logout": "Logout",
+  "logoutConfirmation": "Are you sure you want to logout?",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "yes": "Yes",
+  "no": "No",
+  
+  "connectionError": "Connection error",
+  "tryAgain": "Try Again",
+  "somethingWentWrong": "Something went wrong",
+  "pleaseWait": "Please wait...",
+  "loading": "Loading...",
+  
+  "noChatsYet": "No chats yet",
+  "startChatting": "Start chatting with nearby devices",
+  "searchChats": "Search chats",
+  "deleteChat": "Delete chat",
+  "clearChat": "Clear chat",
+  "blockUser": "Block user",
+  "unblockUser": "Unblock user",
+  
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "justNow": "Just now",
+  
+  "photo": "Photo",
+  "video": "Video",
+  "audio": "Audio",
+  "document": "Document",
+  "location": "Location",
+  "shareLocation": "Share Location",
+  
+  "selectLanguage": "Select Language",
+  "english": "English",
+  "tamil": "தமிழ்",
+  "hindi": "हिंदी",
+  "japanese": "日本語",
+  
+  "connectingAndSending": "Connecting and sending chat request...",
+  "chatRequestAcceptedBy": "🎉 {userName} accepted your chat request!",
+  "@chatRequestAcceptedBy": {
+    "placeholders": {
+      "userName": {
+        "type": "String"
+      }
+    }
+  },
+  "chatRequestRejectedBy": "❌ {userName} declined your chat request",
+  "@chatRequestRejectedBy": {
+    "placeholders": {
+      "userName": {
+        "type": "String"
+      }
+    }
+  },
+  "wouldLikeToChat": "Hi! Would you like to chat?",
+  "chatWith": "Chat",
+  
+  "profileInformation": "Profile Information",
+  "nameCannotBeEmpty": "Name cannot be empty",
+  "pleaseLoginToUpdate": "Please login to update profile",
+  "pleaseLoginToView": "Please login to view profile",
+  
+  "privacyPolicy": "Privacy Policy",
+  "termsOfService": "Terms of Service",
+  "help": "Help",
+  "contactUs": "Contact Us",
+  
+  "status": "Status",
+  "whatsOnYourMind": "What's on your mind?",
+  "bio": "Bio",
+  "tellUsAboutYourself": "Tell us about yourself",
+  "saveChanges": "Save Changes",
+  "notifications": "Notifications",
+  "readReceipts": "Read Receipts",
+  "typingIndicator": "Typing Indicator",
+  "about": "About",
+  "version": "Version",
+  "deviceId": "Device ID",
+  "ipAddress": "IP Address",
+  "unknown": "Unknown",
+  "notConnected": "Not connected",
+  "appTagline": "Real-time P2P Chat over WiFi",
+  "takePhoto": "Take Photo",
+  "chooseFromGallery": "Choose from Gallery",
+  "removePhoto": "Remove Photo",
+  "failedToPickImage": "Failed to pick image",
+  "sendChatRequest": "Send Chat Request",
+  
+  "pleaseLoginToAccessSettings": "Please login to access settings",
+  "appearance": "Appearance",
+  "darkMode": "Dark Mode",
+  "switchTheme": "Switch between light and dark theme",
+  "changedToDarkMode": "Changed to Dark mode",
+  "changedToLightMode": "Changed to Light mode",
+  "pushNotifications": "Push Notifications",
+  "receiveNotifications": "Receive message notifications",
+  "sound": "Sound",
+  "playSound": "Play sound for notifications",
+  "vibration": "Vibration",
+  "vibrateNotifications": "Vibrate for notifications",
+  "language": "Language",
+  "appLanguage": "App Language",
+  "privacyPermissions": "Privacy & Permissions",
+  "locationAccess": "Location Access",
+  "allowLocation": "Allow location for nearby discovery",
+  "locationGranted": "Location access granted",
+  "locationDenied": "Location access denied",
+  "locationDisabled": "Location access disabled",
+  "clearChatHistory": "Clear Chat History",
+  "deleteAllMessages": "Delete all messages",
+  "exportData": "Export Data",
+  "exportProfileData": "Export profile data",
+  "licenses": "Licenses",
+  "areYouSure": "Are you sure?",
+  "chatHistoryCleared": "Chat history cleared",
+  "clear": "Clear",
+  "exportingData": "Exporting data...",
+  
+  "noConversationsYet": "No conversations yet",
+  "discoverNearbyToChat": "Discover nearby devices to start chatting",
+  "viewConversationsHere": "View your conversations here!",
+  "discoverNearbyDevices": "Discover nearby devices to chat with!",
+  "customizeProfileHere": "Customize your profile here!",
+  "adjustPreferences": "Adjust your app preferences!",
+  "profileUpdatedSuccessfully": "Profile updated successfully"
+}

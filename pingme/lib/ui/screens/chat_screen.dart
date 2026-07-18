@@ -8,11 +8,12 @@ import '../../models/device.dart';
 import '../../models/message.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/neumorphic_container.dart';
+import '../../utils/localization_helper.dart';
 
 class ChatScreen extends StatefulWidget {
   final Device device;
 
-  const ChatScreen({Key? key, required this.device}) : super(key: key);
+  const ChatScreen({super.key, required this.device});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -22,10 +23,10 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
-  
+
   late ChatService _chatService;
   late StreamSubscription<Message> _messageSubscription;
-  
+
   List<Message> _messages = [];
   bool _isTyping = false;
   Timer? _typingTimer;
@@ -36,30 +37,68 @@ class _ChatScreenState extends State<ChatScreen> {
     _chatService = context.read<ChatService>();
     _loadMessages();
     _listenToMessages();
+    // Only try to connect if not already connected
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _ensureConnection();
+    });
+  }
+
+  Future<void> _ensureConnection() async {
+    final mdnsService = context.read<MDNSDiscoveryService>();
+
+    // First check if device exists in discovered devices
+    final discoveredDevice = mdnsService.discoveredDevices[widget.device.id];
+    final deviceToConnect = discoveredDevice ?? widget.device;
+
+    // Check if device is already connected
+    if (!mdnsService.hasActiveConnection(deviceToConnect.id)) {
+      debugPrint(
+          '📱 Device not connected, attempting to establish connection...');
+      try {
+        // Try to restore connection
+        await mdnsService.connectToDevice(deviceToConnect);
+        debugPrint('✅ Connection established with ${widget.device.name}');
+      } catch (e) {
+        debugPrint('⚠️ Failed to establish connection: $e');
+        // Connection failure is not critical - messages might still work through discovery
+      }
+    } else {
+      debugPrint('✅ Device already connected: ${widget.device.name}');
+    }
   }
 
   void _loadMessages() {
     setState(() {
       _messages = _chatService.getConversationForDevice(widget.device);
-      // Mark messages as read
+      // Remove duplicates based on message ID
+      final uniqueMessages = <String, Message>{};
       for (var message in _messages) {
-        if (message.receiverId == _chatService.currentUser?.id && 
+        uniqueMessages[message.id] = message;
+        // Mark messages as read
+        if (message.receiverId == _chatService.currentUser?.id &&
             message.status != MessageStatus.read) {
           _chatService.markMessageAsRead(message.id);
         }
       }
+      _messages = uniqueMessages.values.toList()
+        ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
     });
     _scrollToBottom();
   }
 
   void _listenToMessages() {
     final chatId = _chatService.currentUser != null
-        ? '${[_chatService.currentUser!.id, widget.device.userId ?? widget.device.id]..sort()}'.replaceAll('[', '').replaceAll(']', '').replaceAll(', ', '_')
+        ? '${[
+            _chatService.currentUser!.id,
+            widget.device.userId ?? widget.device.id
+          ]..sort()}'
+            .replaceAll('[', '')
+            .replaceAll(']', '')
+            .replaceAll(', ', '_')
         : widget.device.userId ?? widget.device.id;
-    
-    _messageSubscription = _chatService
-        .getMessageStream(chatId)
-        .listen((message) {
+
+    _messageSubscription =
+        _chatService.getMessageStream(chatId).listen((message) {
       setState(() {
         if (message.type == MessageType.typing) {
           // Handle typing indicator
@@ -98,14 +137,16 @@ class _ChatScreenState extends State<ChatScreen> {
     _focusNode.dispose();
     _messageSubscription.cancel();
     _typingTimer?.cancel();
+    // Don't disconnect - keep connection alive for chat list
+    // The connection will be managed by MDNSDiscoveryService
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark 
-          ? AppTheme.darkBackground 
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? AppTheme.darkBackground
           : AppTheme.lightBackground,
       appBar: _buildAppBar(context),
       body: Container(
@@ -139,7 +180,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final isConnected = widget.device.status == ConnectionStatus.connected;
     final avatarUrl = widget.device.metadata['avatarUrl'];
     final status = widget.device.metadata['status'];
-    
+
     return AppBar(
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
@@ -209,7 +250,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   style: const TextStyle(fontSize: 16),
                 ),
                 Text(
-                  status?.toString() ?? (isConnected ? 'Online' : 'Offline'),
+                  status?.toString() ??
+                      (isConnected
+                          ? context.l10n.online
+                          : context.l10n.offline),
                   style: TextStyle(
                     fontSize: 12,
                     color: isConnected ? Colors.green : Colors.grey,
@@ -242,17 +286,17 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Say hi to ${widget.device.name}',
+              context.l10n.sayHiTo(widget.device.name),
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.grey.shade600,
-              ),
+                    color: Colors.grey.shade600,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Start a conversation',
+              context.l10n.startConversation,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey.shade500,
-              ),
+                    color: Colors.grey.shade500,
+                  ),
             ),
           ],
         ),
@@ -266,7 +310,7 @@ class _ChatScreenState extends State<ChatScreen> {
       itemBuilder: (context, index) {
         final message = _messages[index];
         final isMe = message.senderId == _chatService.currentUser?.id;
-        
+
         return _buildMessageBubble(message, isMe)
             .animate()
             .fadeIn(duration: 200.ms)
@@ -288,10 +332,23 @@ class _ChatScreenState extends State<ChatScreen> {
           crossAxisAlignment:
               isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
+            // Show sender name for received messages
+            if (!isMe)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4, left: 16),
+                child: Text(
+                  message.senderName,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
+                ),
+              ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                gradient: isMe 
+                gradient: isMe
                     ? LinearGradient(
                         colors: [
                           AppTheme.primaryColor,
@@ -320,7 +377,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: isMe 
+                    color: isMe
                         ? AppTheme.primaryColor.withOpacity(0.2)
                         : Colors.black.withOpacity(0.08),
                     offset: const Offset(0, 4),
@@ -335,7 +392,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   Text(
                     message.content,
                     style: TextStyle(
-                      color: isMe ? Colors.white : Theme.of(context).textTheme.bodyLarge?.color,
+                      color: isMe
+                          ? Colors.white
+                          : Theme.of(context).textTheme.bodyLarge?.color,
                       fontSize: 15,
                     ),
                   ),
@@ -349,8 +408,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 Text(
                   _formatTime(message.timestamp),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontSize: 11,
-                  ),
+                        fontSize: 11,
+                      ),
                 ),
                 if (isMe) ...[
                   const SizedBox(width: 4),
@@ -394,7 +453,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: NeumorphicTextField(
               controller: _messageController,
               focusNode: _focusNode,
-              hintText: 'Type a message...',
+              hintText: context.l10n.typeMessage,
               maxLines: 3,
               onChanged: (text) => _handleTyping(),
             ),
@@ -415,26 +474,69 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  void _sendMessage() {
+  void _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
+
+    final mdnsService = context.read<MDNSDiscoveryService>();
+
+    // Ensure connection is established first
+    if (widget.device.status != ConnectionStatus.connected) {
+      debugPrint('Device not connected, attempting connection...');
+      try {
+        await mdnsService.connectToDevice(widget.device);
+        // Wait a moment for connection to stabilize
+        await Future.delayed(const Duration(milliseconds: 500));
+      } catch (e) {
+        debugPrint('Failed to connect to device: $e');
+        // Show error to user
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(context.l10n.failedToConnect),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+    }
 
     final message = Message(
       chatId: '', // Will be generated by chat service
       senderId: _chatService.currentUser?.id ?? '',
       senderName: _chatService.currentUser?.name ?? 'You',
-      receiverId: widget.device.userId,
+      receiverId:
+          widget.device.userId ?? widget.device.id, // Use device.id as fallback
       content: text,
       type: MessageType.text,
       timestamp: DateTime.now(),
     );
 
-    final mdnsService = context.read<MDNSDiscoveryService>();
-    _chatService.sendMessage(message, widget.device, mdnsService);
+    // Add message to local list immediately for instant feedback
+    setState(() {
+      _messages.add(message);
+    });
     _messageController.clear();
-    
-    // Don't add to local list here - let it come through the stream
     _scrollToBottom();
+
+    try {
+      await _chatService.sendMessage(message, widget.device, mdnsService);
+    } catch (e) {
+      // Remove the message if sending failed
+      setState(() {
+        _messages.removeWhere((m) => m.id == message.id);
+      });
+      debugPrint('Failed to send message: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.failedToSendMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _handleTyping() {
@@ -471,7 +573,7 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.image, color: AppTheme.primaryColor),
-              title: const Text('Photo'),
+              title: Text(context.l10n.photo),
               onTap: () {
                 Navigator.pop(context);
                 // Implement photo picker
@@ -479,23 +581,25 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.videocam, color: AppTheme.primaryColor),
-              title: const Text('Video'),
+              title: Text(context.l10n.video),
               onTap: () {
                 Navigator.pop(context);
                 // Implement video picker
               },
             ),
             ListTile(
-              leading: const Icon(Icons.attach_file, color: AppTheme.primaryColor),
-              title: const Text('File'),
+              leading:
+                  const Icon(Icons.attach_file, color: AppTheme.primaryColor),
+              title: Text(context.l10n.file),
               onTap: () {
                 Navigator.pop(context);
                 // Implement file picker
               },
             ),
             ListTile(
-              leading: const Icon(Icons.location_on, color: AppTheme.primaryColor),
-              title: const Text('Location'),
+              leading:
+                  const Icon(Icons.location_on, color: AppTheme.primaryColor),
+              title: Text(context.l10n.location),
               onTap: () {
                 Navigator.pop(context);
                 // Implement location sharing
